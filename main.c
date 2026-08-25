@@ -27,9 +27,13 @@ typedef struct
 
 Hashmap* allocate_map(uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ));
 Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ));
+Entry* allocate_new_entry(void* key, void* hash,  void* value);
+Hashmap* reallocate_map(Hashmap* hashmap);
+Entry* put_with_hash(void* key, void* hash,  void* value);
+Hashmap* change(uint64_t entry_count,uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ));
 Hashmap* get(Hashmap* hashmap, void* key);
 Hashmap* put_map(Hashmap* hashmap, void* key, void* value);
-Hashmap* free_map(Hashmap* hashmap);
+Hashmap* free_hashmap(Hashmap* hashmap);
 uint32_t hasingFunction(void* key);
 uint32_t checkKey(void* key1, void* key2);
 
@@ -68,28 +72,124 @@ Hashmap* allocate_map(uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey
     return allocate_buckets(DEFULAT_BUCKETS,hasingFunction, checkKey);
 }
 
-
 Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ))
 {
-    Hashmap* map;
-    map->bucket_count   = number_of_buckets;
-    map->entry_count    = 0;
-    map->buckets_list   = malloc(number_of_buckets * sizeof(Hashmap));
-    map->hasingFunction = hasingFunction;
-    map->checkKey       = checkKey;
+    Hashmap* hashmap;
+    hashmap->bucket_count   = number_of_buckets;
+    hashmap->entry_count    = 0;
+    hashmap->buckets_list   = malloc(number_of_buckets * sizeof(Hashmap));
+    hashmap->hasingFunction = hasingFunction;
+    hashmap->checkKey       = checkKey;
 
-    for(int x = 0; x < map->bucket_count; x++ )
+    for(int x = 0; x < hashmap->bucket_count; x++ )
     {
-        map->buckets_list[x] = NULL;
+        hashmap->buckets_list[x] = NULL;
     }
 
-    return map;
+    return hashmap;
 }
 
-// Hashmap* put(Hashmap* hashmap, void* key, void* value)
-// {
-// // cooked 
-// }
+Hashmap* change(uint64_t entry_count,uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ))
+{
+    double 
+
+}
+
+
+
+Hashmap* reallocate_map(Hashmap* hashmap)
+{
+    // grab bucket size from current hash map
+    Hashmap* new_map = change(hashmap->entry_count,hashmap->hasingFunction,hashmap->checkKey)
+    uint64_t new_bucket_count = hashmap->bucket_count;
+
+    //traverse the hashmap and doi what.???
+
+    for(uint64_t x =  0; x < hashmap->bucket_count; x++)
+    {
+        Entry* current = new_map->buckets_list[x];
+
+        while(current)
+        {
+            put_map(&new_map, current->key, current->value);
+            current = current->next;
+        }
+
+    }
+
+    Entry** tmplist = hashmap->buckets_list;
+    hashmap->buckets_list = new_map->buckets_list;
+    new_map->buckets_list = tmplist;
+    new_map->bucket_count = hashmap->bucket_count;
+
+    free_hashmap//do this later
+
+
+    
+}
+
+Entry* allocate_new_entry(void* key, void* hash,  void* value)
+{
+    Entry* new_map_entry =  malloc(sizeof(Entry)); 
+    new_map_entry->hash  = hash;
+    new_map_entry->key   = key;
+    new_map_entry->value = value;  
+    new_map_entry->next  = NULL     
+
+}
+
+
+Hashmap* put(Hashmap* hashmap, void* key, void* value)
+{
+    uint64_t index = abs(key) % hashmap->bucket_count; // method makes sure we are within bucket 
+    uint64_t hash  = hashmap->hasingFunction(key);
+
+    //incase a new map entry is made 
+
+    Entry* new_map_entry =  allocate_new_entry(void* key, void* hash,  void* value)
+    // does entry index exit already within linked list?
+    if(hashmap->buckets_list[index])
+    {   
+        Entry* current = hashmap->buckets_list[index]; // head
+
+        while(current->next && hash > current->hash) 
+        {
+            current = current->next; // take me to the top of the list
+        }
+
+        //    checking for collision       checking if keys are the same
+        if (hash == current->hash && !hashmap->checkKey(key, current->key))
+        {   
+            current->value = value;
+        }
+        else
+        {
+            Entry* temp   = current->next;
+            current->next = new_map_entry;
+            new_map_entry = temp;
+
+            hashmap->entry_count++;
+        }
+        
+
+    }
+    else
+    {
+        hashmap->buckets_list[index] = new_map_entry;
+        hashmap->bucket_count++;
+    }
+    
+    double loadfactor = hashmap->entry_count;
+    loadfactor       /= (double)hashmap->bucket_count;
+    if(loadfactor > DEFULAT_BUCKETS)
+    {
+        reallocate_map
+    }
+
+
+
+    
+}
 
 // Hashmap* get(Hashmap* hashmap, void* key)
 // {
@@ -97,10 +197,17 @@ Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hasingFunction)
 // }
 
 
-// Hashmap* free(Hashmap* hashmap)
-// {
-// // cooked    
-// }
+Hashmap* free(Hashmap* hashmap)
+{
+
+    for (uint64_t x; x < hashmap->bucket_count; x++)
+    {
+        free(hashmap->buckets_list[x])
+
+    }
+
+
+}
 
 uint32_t hasingFunction(void* key)
 {
