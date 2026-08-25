@@ -134,7 +134,7 @@ Entry* allocate_new_entry(void* key, void* hash,  void* value)
     new_map_entry->hash  = hash;
     new_map_entry->key   = key;
     new_map_entry->value = value;  
-    new_map_entry->next  = NULL     
+    new_map_entry->next  = NULL;     
 
 }
 
@@ -144,34 +144,35 @@ Hashmap* put(Hashmap* hashmap, void* key, void* value)
     uint64_t index = abs(key) % hashmap->bucket_count; // method makes sure we are within bucket 
     uint64_t hash  = hashmap->hasingFunction(key);
 
-    //incase a new map entry is made 
+    //the new entry
+    Entry* new_map_entry =  allocate_new_entry(key, hash, value);
 
-    Entry* new_map_entry =  allocate_new_entry(void* key, void* hash,  void* value)
     // does entry index exit already within linked list?
     if(hashmap->buckets_list[index])
     {   
-        Entry* current = hashmap->buckets_list[index]; // head
+        Entry* current = hashmap->buckets_list[index]; // head is current. current can now access the all Entry members
 
         while(current->next && hash > current->hash) 
         {
             current = current->next; // take me to the top of the list
         }
 
-        //    checking for collision       checking if keys are the same
         if (hash == current->hash && !hashmap->checkKey(key, current->key))
         {   
-            current->value = value;
+            // Update
+            current->value = value; 
         }
         else
         {
+            // Insert
             Entry* temp   = current->next;
             current->next = new_map_entry;
             new_map_entry = temp;
 
             hashmap->entry_count++;
+
         }
         
-
     }
     else
     {
@@ -179,16 +180,14 @@ Hashmap* put(Hashmap* hashmap, void* key, void* value)
         hashmap->bucket_count++;
     }
     
+    //check if 75% threshold has been passed 
     double loadfactor = hashmap->entry_count;
     loadfactor       /= (double)hashmap->bucket_count;
     if(loadfactor > DEFULAT_BUCKETS)
     {
-        reallocate_map
+        reallocate_map(hashmap);
     }
 
-
-
-    
 }
 
 // Hashmap* get(Hashmap* hashmap, void* key)
