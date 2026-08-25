@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #define DEFULAT_BUCKETS 16
+#define THRESHOLD       0.75
 typedef struct 
 {
     void* key;               // how I will find hash
@@ -20,22 +21,22 @@ typedef struct
 
     Entry** buckets_list;          // pointer to pointer that begins linked list 
 
-    uint32_t (*hasingFunction)(void* key);        
-    uint32_t (*checkKey)(void* key1, void* key2 );  
+    uint32_t (*hashing_function)(void* key);        
+    uint32_t (*compare_key)(void* key1, void* key2 );  
 
 } Hashmap;
 
-Hashmap* allocate_map(uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ));
-Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ));
+Hashmap* allocate_map(uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
+Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
 Entry* allocate_new_entry(void* key, void* hash,  void* value);
 Hashmap* reallocate_map(Hashmap* hashmap);
 Entry* put_with_hash(void* key, void* hash,  void* value);
-Hashmap* change(uint64_t entry_count,uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ));
+Hashmap* increase_threshold(uint64_t entry_count,uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
 Hashmap* get(Hashmap* hashmap, void* key);
 Hashmap* put_map(Hashmap* hashmap, void* key, void* value);
 Hashmap* free_hashmap(Hashmap* hashmap);
-uint32_t hasingFunction(void* key);
-uint32_t checkKey(void* key1, void* key2);
+uint32_t hashing_function(void* key);
+uint32_t compare_key(void* key1, void* key2);
 
 
 
@@ -51,8 +52,8 @@ uint32_t checkKey(void* key1, void* key2);
 int main()
 {
     printf("gulp \n");
-    uint32_t keying  = checkKey("damn", "damner");
-    uint32_t hashing = hasingFunction("hashmykeyplease");
+    uint32_t keying  = compare_key("damn", "damner");
+    uint32_t hashing = hashing_function("hashmykeyplease");
     printf("key is %d\n hashed key %d", keying,hashing );
 
     return 0;
@@ -67,19 +68,19 @@ int main()
 
 
 
-Hashmap* allocate_map(uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ))
+Hashmap* allocate_map(uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ))
 {
-    return allocate_buckets(DEFULAT_BUCKETS,hasingFunction, checkKey);
+    return allocate_buckets(DEFULAT_BUCKETS,hashing_function, compare_key);
 }
 
-Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ))
+Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ))
 {
     Hashmap* hashmap;
-    hashmap->bucket_count   = number_of_buckets;
-    hashmap->entry_count    = 0;
-    hashmap->buckets_list   = malloc(number_of_buckets * sizeof(Hashmap));
-    hashmap->hasingFunction = hasingFunction;
-    hashmap->checkKey       = checkKey;
+    hashmap->bucket_count     = number_of_buckets;
+    hashmap->entry_count      = 0;
+    hashmap->buckets_list     = malloc(number_of_buckets * sizeof(Hashmap));
+    hashmap->hashing_function = hashing_function;
+    hashmap->compare_key      = compare_key;
 
     for(int x = 0; x < hashmap->bucket_count; x++ )
     {
@@ -89,9 +90,17 @@ Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hasingFunction)
     return hashmap;
 }
 
-Hashmap* change(uint64_t entry_count,uint32_t (*hasingFunction)(void* key), uint32_t (*checkKey)(void* key1, void* key2 ))
+Hashmap* increase_threshold(uint64_t entry_count, uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ))
 {
-    double 
+    double entry_num   = (double)entry_count;
+    double buckets_num = DEFULAT_BUCKETS;
+
+    while(entry_num / buckets_num > THRESHOLD )
+    {
+        buckets_num *= 2.0;
+    }
+
+    return allocate_buckets(buckets_num, hashing_function, compare_key);
 
 }
 
@@ -100,10 +109,8 @@ Hashmap* change(uint64_t entry_count,uint32_t (*hasingFunction)(void* key), uint
 Hashmap* reallocate_map(Hashmap* hashmap)
 {
     // grab bucket size from current hash map
-    Hashmap* new_map = change(hashmap->entry_count,hashmap->hasingFunction,hashmap->checkKey)
+    Hashmap* new_map = increase_threshold(hashmap->entry_count,hashmap->hashing_function,hashmap->compare_key);
     uint64_t new_bucket_count = hashmap->bucket_count;
-
-    //traverse the hashmap and doi what.???
 
     for(uint64_t x =  0; x < hashmap->bucket_count; x++)
     {
@@ -142,7 +149,7 @@ Entry* allocate_new_entry(void* key, void* hash,  void* value)
 Hashmap* put(Hashmap* hashmap, void* key, void* value)
 {
     uint64_t index = abs(key) % hashmap->bucket_count; // method makes sure we are within bucket 
-    uint64_t hash  = hashmap->hasingFunction(key);
+    uint64_t hash  = hashmap->hashing_function(key);
 
     //the new entry
     Entry* new_map_entry =  allocate_new_entry(key, hash, value);
@@ -154,10 +161,10 @@ Hashmap* put(Hashmap* hashmap, void* key, void* value)
 
         while(current->next && hash > current->hash) 
         {
-            current = current->next; // take me to the top of the list
+            current = current->next; // take me to the spot in the list where one of the while arguments is not true
         }
 
-        if (hash == current->hash && !hashmap->checkKey(key, current->key))
+        if (hash == current->hash && !hashmap->compare_key(key, current->key))
         {   
             // Update
             current->value = value; 
@@ -208,7 +215,7 @@ Hashmap* free(Hashmap* hashmap)
 
 }
 
-uint32_t hasingFunction(void* key)
+uint32_t hashing_function(void* key)
 {
     printf("hashing %d\n", key);
     uint32_t the_key = 0;
@@ -229,7 +236,7 @@ uint32_t hasingFunction(void* key)
     return the_key;
 }
 
-uint32_t checkKey(void* key1, void* key2)
+uint32_t compare_key(void* key1, void* key2)
 {
     if(!key1)
     {
