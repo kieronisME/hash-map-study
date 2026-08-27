@@ -2,8 +2,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
 #define DEFULAT_BUCKETS 16
 #define THRESHOLD       0.75
+
+
+
+
 typedef struct 
 {
     void* key;               // how I will find hash
@@ -12,7 +17,6 @@ typedef struct
     struct Entry* next;      // linked list for clashes or collisions whatever they calle them
 
 } Entry;
-
 
 typedef struct 
 {
@@ -26,25 +30,33 @@ typedef struct
 
 } Hashmap;
 
+
+
+//allocation
 Hashmap* allocate_map(uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
 Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
 Entry* allocate_new_entry(void* key, void* hash,  void* value);
 Hashmap* reallocate_map(Hashmap* hashmap);
+
+//put
+Hashmap* put_map(Hashmap* hashmap, void* key, void* value);
 Entry* put_with_hash(void* key, void* hash,  void* value);
 Hashmap* increase_threshold(uint64_t entry_count,uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
+
+//get
 Hashmap* get(Hashmap* hashmap, void* key);
-Hashmap* put_map(Hashmap* hashmap, void* key, void* value);
-Hashmap* free_hashmap(Hashmap* hashmap);
+
+//traverse 
+void traverse_map(Hashmap* hashmap, void(print_enrty)(void* key, void* value));
+
+// hashing processes 
 uint32_t hashing_function(void* key);
 uint32_t compare_key(void* key1, void* key2);
 
-
-
-
-
-
-
-
+//free
+void free_hashmap(Hashmap* hashmap);
+void free_entry(Entry* hashmap);
+//do one to free individual entrys
 
 
 
@@ -52,19 +64,10 @@ uint32_t compare_key(void* key1, void* key2);
 int main()
 {
     printf("gulp \n");
-    uint32_t keying  = compare_key("damn", "damner");
-    uint32_t hashing = hashing_function("hashmykeyplease");
-    printf("key is %d\n hashed key %d", keying,hashing );
+
 
     return 0;
 }
-
-
-
-
-
-
-
 
 
 
@@ -129,7 +132,7 @@ Hashmap* reallocate_map(Hashmap* hashmap)
     new_map->buckets_list = tmplist;
     new_map->bucket_count = hashmap->bucket_count;
 
-    free_hashmap//do this later
+    free_hashmap(&tmplist);
 
 
     
@@ -203,17 +206,6 @@ Hashmap* put(Hashmap* hashmap, void* key, void* value)
 // }
 
 
-Hashmap* free(Hashmap* hashmap)
-{
-
-    for (uint64_t x; x < hashmap->bucket_count; x++)
-    {
-        free(hashmap->buckets_list[x])
-
-    }
-
-
-}
 
 uint32_t hashing_function(void* key)
 {
@@ -251,3 +243,52 @@ uint32_t compare_key(void* key1, void* key2)
     char* key_two = (char*) key2;
     return strcmp(key_one, key_two);
 }
+
+
+void free_hashmap(Hashmap* hashmap)
+{
+
+    for (uint64_t x; x < hashmap->bucket_count; x++)
+    {
+        if(hashmap->buckets_list[x])
+        {
+            free_entry(hashmap);
+            free(hashmap->buckets_list[x]);
+        }
+
+    }
+
+    hashmap->bucket_count = 0;
+    hashmap->entry_count  = 0;
+    free(hashmap->buckets_list);
+
+}
+
+void free_entry(Entry* entry)
+{
+    if(entry){
+        if(entry->next)
+        {
+            free_entry(entry->next);
+            free(entry);
+        }
+    }
+}
+
+
+void traverse_map(Hashmap* hashmap, void(print_enrty)(void* key, void* value))
+{
+    for(uint64_t x = 0; x < hashmap->bucket_count; x++)
+    {
+        Entry* current = hashmap->buckets_list[x];
+
+        while(current)
+        {
+            print_enrty(current->key, current->value);
+            current->next;
+        }
+
+    }
+
+}
+
