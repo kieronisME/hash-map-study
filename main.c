@@ -35,7 +35,7 @@ typedef struct Hashmap
 //allocation
 Hashmap* allocate_map(uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
 Hashmap* allocate_buckets(uint32_t number_of_buckets, uint32_t (*hashing_function)(void* key), uint32_t (*compare_key)(void* key1, void* key2 ));
-Entry* allocate_new_entry(void* key, void* hash,  void* value);
+Entry* allocate_new_entry(void* key, uint64_t hash,  void* value);
 Hashmap* reallocate_map(Hashmap* hashmap);
 
 //put
@@ -144,7 +144,7 @@ Hashmap* reallocate_map(Hashmap* hashmap)
     
 }
 
-Entry* allocate_new_entry(void* key, void* hash,  void* value)
+Entry* allocate_new_entry(void* key, uint64_t hash,  void* value)
 {
     Entry* new_map_entry =  malloc(sizeof(Entry)); 
     new_map_entry->hash  = hash;
@@ -155,9 +155,9 @@ Entry* allocate_new_entry(void* key, void* hash,  void* value)
 }
 
 
-Hashmap* put(Hashmap* hashmap, void* key, void* value)
+Hashmap* put_map(Hashmap* hashmap, void* key, void* value)
 {
-    uint64_t index = abs(key) % hashmap->bucket_count; // method makes sure we are within bucket 
+    uint64_t index = abs((uint64_t)key) % hashmap->bucket_count; // method makes sure we are within bucket 
     uint64_t hash  = hashmap->hashing_function(key);
 
     //the new entry
@@ -258,7 +258,7 @@ void free_hashmap(Hashmap* hashmap)
     {
         if(hashmap->buckets_list[x])
         {
-            free_entry(hashmap);
+            free_entry(hashmap->buckets_list[x]);
             free(hashmap->buckets_list[x]);
         }
 
