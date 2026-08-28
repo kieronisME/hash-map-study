@@ -9,7 +9,7 @@
 
 
 
-typedef struct 
+typedef struct Entry
 {
     void* key;               // how I will find hash
     void* value;             // value within hash
@@ -18,7 +18,7 @@ typedef struct
 
 } Entry;
 
-typedef struct 
+typedef struct Hashmap
 {
     uint64_t bucket_count;
     uint64_t entry_count;
@@ -113,15 +113,15 @@ Hashmap* reallocate_map(Hashmap* hashmap)
 {
     // grab bucket size from current hash map
     Hashmap* new_map = increase_threshold(hashmap->entry_count,hashmap->hashing_function,hashmap->compare_key);
-    uint64_t new_bucket_count = hashmap->bucket_count;
+    uint64_t new_bucket_count = new_map->bucket_count;
 
-    for(uint64_t x =  0; x < hashmap->bucket_count; x++)
+    for(uint64_t x =  0; x < new_bucket_count; x++)
     {
-        Entry* current = new_map->buckets_list[x];
+        Entry* current = hashmap->buckets_list[x];
 
         while(current)
         {
-            put_map(&new_map, current->key, current->value);
+            put_map(new_map, current->key, current->value);
             current = current->next;
         }
 
@@ -130,11 +130,17 @@ Hashmap* reallocate_map(Hashmap* hashmap)
     Entry** tmplist = hashmap->buckets_list;
     hashmap->buckets_list = new_map->buckets_list;
     new_map->buckets_list = tmplist;
+
+    // mapentry **tmpList = map->buckets;
+    // map->buckets = ret.buckets;
+    // ret.buckets = tmpList;
+
+
+
     new_map->bucket_count = hashmap->bucket_count;
 
-    free_hashmap(&tmplist);
-
-
+    free_hashmap(new_map);
+    hashmap->bucket_count = new_bucket_count;
     
 }
 
